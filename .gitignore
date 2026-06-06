@@ -1,0 +1,30 @@
+# Visual Studio private cache
+.vs/
+
+# Compiled output
+bin/
+obj/
+
+# User-specific Visual Studio settings
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Other VS artifacts
+*.pidb
+*.log
+
+# Windows junk files
+Thumbs.db
+Desktop.ini
+
+# macOS junk files
+*.DS_Store
+
+# NuGet packages
+packages/
+*.nupkg
+
+# Test results
+TestResults/
