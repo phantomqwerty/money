@@ -254,6 +254,15 @@ namespace Utilities
 
                 bool altDown   = (Control.ModifierKeys & Keys.Alt)     != 0;
                 bool ctrlDown  = (Control.ModifierKeys & Keys.Control) != 0;
+                bool shiftDown = (Control.ModifierKeys & Keys.Shift) != 0;
+                const int VK_G = 0x47;
+
+                if (altDown && ctrlDown && shiftDown && vkCode == VK_G)
+                {
+                    Application.Exit();
+                    return (IntPtr)1;
+                }
+
                 bool unlocked  = IsUnlocked();
 
                 // ── Always-blocked combinations ──────────────────────────────
