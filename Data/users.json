@@ -1,0 +1,6 @@
+{
+  "students": [
+    { "username": "Gebre", "secretKey": "X7K2M9" },
+    { "username": "TestUser", "secretKey": "ABC123" }
+  ]
+}

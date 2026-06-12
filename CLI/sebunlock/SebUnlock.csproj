@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>SebUnlock</AssemblyName>
+    <RootNamespace>SebUnlock</RootNamespace>
+  </PropertyGroup>
+
+  <!--
+    Copies Data/users.json from the solution root into Data/ next to the exe
+    so the app can resolve the path via AppDomain.CurrentDomain.BaseDirectory.
+  -->
+  <ItemGroup>
+    <None Update="..\..\Data\users.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Data\users.json</Link>
+    </None>
+  </ItemGroup>
+
+</Project>
