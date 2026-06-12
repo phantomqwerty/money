@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>Assets\icons\SafeExamBrowser.ico</ApplicationIcon>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>SEBClone</RootNamespace>
+    <AssemblyName>SEBClone</AssemblyName>
+    <Platforms>AnyCPU</Platforms>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <!--
+    The SDK default Compile glob is recursive and would reach into the sibling
+    CLI\sebunlock\obj\ directory, pulling in auto-generated AssemblyInfo / 
+    AssemblyAttributes files that clash with SEBClone's own generated ones.
+    Explicitly remove every .cs file under CLI\ and the Assets/Data folders.
+  -->
+  <ItemGroup>
+    <Compile Remove="CLI\**\*.cs" />
+    <EmbeddedResource Remove="CLI\**" />
+    <None Remove="CLI\**" />
+  </ItemGroup>
+
+  <!-- Copy asset files to the output directory, preserving folder structure -->
+  <ItemGroup>
+    <None Update="Assets\icons\SplashScreen.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\icons\SafeExamBrowser.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
