@@ -2,7 +2,9 @@ using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
+using System.Text.Json;
 using System.Windows.Forms;
+using SEBClone.Models;
 using Utilities;
 
 namespace SEBClone.Forms
@@ -155,6 +157,7 @@ namespace SEBClone.Forms
             // ── Layout — all relative to card panel ───────────────────────────
             LayoutCard();
 
+            _cardPanel.BringToFront();
             ResumeLayout(false);
 
             // Centre the card on the screen after the form bounds are applied.
@@ -227,15 +230,62 @@ namespace SEBClone.Forms
             e.Graphics.FillRectangle(brush, 0, 0, _cardPanel.Width, 4);
         }
 
-        // ── Button click — Phase 5 placeholder ───────────────────────────────
+        // ── Button click — validate credentials and open ProfileConfirm ────
 
         private void OnStartExamClick(object? sender, EventArgs e)
         {
-            MessageBox.Show(
-                "Login successful — Profile screen next",
-                "Safe Exam Browser",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
+            string username = _userBox.Text.Trim();
+            string examCode = _codeBox.Text.Trim();
+
+            // Locate users.json next to the exe.
+            string usersJsonPath = Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory, "Data", "users.json");
+
+            if (!File.Exists(usersJsonPath))
+            {
+                MessageBox.Show(
+                    $"Configuration error: users.json not found.\n{usersJsonPath}",
+                    "Safe Exam Browser",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
+            }
+
+            UserList? userList;
+            try
+            {
+                string json = File.ReadAllText(usersJsonPath);
+                userList = JsonSerializer.Deserialize<UserList>(json);
+            }
+            catch (JsonException ex)
+            {
+                MessageBox.Show(
+                    $"Failed to read user data.\n{ex.Message}",
+                    "Safe Exam Browser",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
+            }
+
+            bool match = userList?.Students?.Exists(u =>
+                string.Equals(u.Username,  username, StringComparison.Ordinal) &&
+                string.Equals(u.SecretKey, examCode, StringComparison.Ordinal)) == true;
+
+            if (!match)
+            {
+                MessageBox.Show(
+                    "Invalid username or exam code.",
+                    "Safe Exam Browser",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Credentials validated — open the Profile Confirmation screen.
+            // Use username as the display name for now (real names added in a later phase).
+            var confirm = new ProfileConfirm(username, username);
+            confirm.Show();
+            this.Close();
         }
 
         // ── Factory helpers ───────────────────────────────────────────────────
@@ -287,9 +337,15 @@ namespace SEBClone.Forms
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
-            // Rebuild the clip region whenever the panel is resized.
-            Region = Region.FromHrgn(CreateRoundRectRgn(
-                0, 0, Width, Height, _radius, _radius));
+            // Guard: only set the region once the panel has a real size.
+            // If either dimension is zero (e.g. during early construction before
+            // Size = new Size(...) is applied), GDI returns a null/empty region
+            // handle and the card would become completely invisible.
+            if (Width > 0 && Height > 0)
+            {
+                Region = Region.FromHrgn(CreateRoundRectRgn(
+                    0, 0, Width, Height, _radius, _radius));
+            }
         }
 
         // P/Invoke: creates a rounded-rectangle region handle.
