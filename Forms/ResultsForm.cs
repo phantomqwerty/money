@@ -15,10 +15,12 @@ namespace SEBClone.Forms
     internal sealed class ResultsForm : Form
     {
         // ── Palette ───────────────────────────────────────────────────────────
-        private static readonly Color BgColor      = Color.FromArgb(0xF0, 0xF0, 0xF0);
-        private static readonly Color HeaderBlue   = Color.FromArgb(55, 79, 191);
-        private static readonly Color PassGreen    = Color.FromArgb(76, 175, 80);
-        private static readonly Color FailRed      = Color.FromArgb(211, 47, 47);
+        private static readonly Color BgColor       = Color.FromArgb(0xFF, 0xF0, 0xF0, 0xF0);
+        private static readonly Color HeaderBg      = Color.FromArgb(0xFF, 0xF0, 0xF0, 0xF0); // SEB #FFF0F0F0
+        private static readonly Color HeaderBlue    = Color.FromArgb(55, 79, 191);             // kept for score card
+        private static readonly Color SecondaryText = Color.FromArgb(105, 105, 105);           // DimGray #696969
+        private static readonly Color PassGreen     = Color.FromArgb(76, 175, 80);
+        private static readonly Color FailRed       = Color.FromArgb(211, 47, 47);
 
         // ── Data ──────────────────────────────────────────────────────────────
         private readonly int                  _score;
@@ -59,12 +61,18 @@ namespace SEBClone.Forms
             if (File.Exists(icoPath))
                 Icon = new Icon(icoPath);
 
-            // ── Header Panel ──────────────────────────────────────────────────
+            // ── Header Panel (SEB light theme: #FFF0F0F0, DimGray text) ───────────
             var headerPanel = new Panel
             {
                 Dock      = DockStyle.Top,
                 Height    = 60,
-                BackColor = HeaderBlue,
+                BackColor = HeaderBg,
+            };
+            // Bottom border — mirrors ExamForm taskbar top-border style
+            headerPanel.Paint += (s, e) =>
+            {
+                using var pen = new Pen(Color.LightGray, 1);
+                e.Graphics.DrawLine(pen, 0, headerPanel.Height - 1, headerPanel.Width, headerPanel.Height - 1);
             };
 
             // SEB icon (left)
@@ -84,7 +92,7 @@ namespace SEBClone.Forms
             {
                 Text      = "Exam Results",
                 Font      = new Font("Segoe UI", 16f, FontStyle.Bold, GraphicsUnit.Pixel),
-                ForeColor = Color.White,
+                ForeColor = SecondaryText,
                 BackColor = Color.Transparent,
                 TextAlign = ContentAlignment.MiddleCenter,
                 AutoSize  = false,
@@ -98,7 +106,7 @@ namespace SEBClone.Forms
             {
                 Text      = _studentName,
                 Font      = new Font("Segoe UI", 11f, FontStyle.Regular, GraphicsUnit.Pixel),
-                ForeColor = Color.White,
+                ForeColor = SecondaryText,
                 BackColor = Color.Transparent,
                 TextAlign = ContentAlignment.MiddleRight,
                 AutoSize  = true,

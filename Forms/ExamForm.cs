@@ -33,6 +33,14 @@ namespace SEBClone.Forms
         private Panel      _contentPanel  = null!;
         private Timer      _clockTimer    = null!;
 
+        // Top Toolbar
+        private Panel      _toolbarPanel   = null!;
+        private Button     _tbHomeButton   = null!;
+        private Button     _tbBackButton   = null!;
+        private Button     _tbFwdButton    = null!;
+        private Button     _tbReloadButton = null!;
+        private TextBox    _tbTitleBox     = null!;
+
         // Left Panel (Question Display)
         private Panel      _leftPanel = null!;
         private Panel      _leftTopBar = null!;
@@ -180,7 +188,7 @@ namespace SEBClone.Forms
             {
                 Text      = DateTime.Now.ToString("HH:mm:ss"),
                 Font      = new Font("Segoe UI", 12f, FontStyle.Bold, GraphicsUnit.Point),
-                ForeColor = Color.Black,
+                ForeColor = SecondaryText,
                 BackColor = Color.Transparent,
                 TextAlign = ContentAlignment.MiddleRight,
                 Padding   = new Padding(10, 0, 10, 0),
@@ -189,22 +197,22 @@ namespace SEBClone.Forms
             _clockLabel.SizeChanged += (s, e) => LayoutTaskbarControls();
             _taskbarPanel.Controls.Add(_clockLabel);
 
-            // ── Quit Button ───────────────────────────────────────────────────
+            // ── Quit Button ── SEB #D32F2F red, white text, no border ─────────
             _quitButton = new Button
             {
                 Text      = "Quit",
                 Font      = new Font("Segoe UI", 9f, FontStyle.Bold, GraphicsUnit.Point),
                 ForeColor = Color.White,
-                BackColor = Color.FromArgb(220, 40, 40),
+                BackColor = Color.FromArgb(0xD3, 0x2F, 0x2F),
                 FlatStyle = FlatStyle.Flat,
                 Cursor    = Cursors.Hand,
                 UseVisualStyleBackColor = false,
             };
-            _quitButton.FlatAppearance.BorderSize = 0;
-            _quitButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(240, 60, 60);
-            _quitButton.FlatAppearance.MouseDownBackColor = Color.FromArgb(180, 20, 20);
-            _quitButton.MouseEnter += (_, _) => _quitButton.BackColor = Color.FromArgb(240, 60, 60);
-            _quitButton.MouseLeave += (_, _) => _quitButton.BackColor = Color.FromArgb(220, 40, 40);
+            _quitButton.FlatAppearance.BorderSize            = 0;
+            _quitButton.FlatAppearance.MouseOverBackColor     = Color.FromArgb(0xE5, 0x39, 0x35);
+            _quitButton.FlatAppearance.MouseDownBackColor     = Color.FromArgb(0xB7, 0x1C, 0x1C);
+            _quitButton.MouseEnter += (_, _) => _quitButton.BackColor = Color.FromArgb(0xE5, 0x39, 0x35);
+            _quitButton.MouseLeave += (_, _) => _quitButton.BackColor = Color.FromArgb(0xD3, 0x2F, 0x2F);
             _quitButton.Click      += OnQuitClick;
             _taskbarPanel.Controls.Add(_quitButton);
 
@@ -215,6 +223,63 @@ namespace SEBClone.Forms
             };
             _clockTimer.Tick += OnClockTick;
             _clockTimer.Start();
+
+            // ── Top Toolbar (SEB BrowserWindow chrome style) ──────────────────
+            _toolbarPanel = new Panel
+            {
+                Dock      = DockStyle.Top,
+                Height    = 40,
+                BackColor = BgColor,
+                Padding   = new Padding(5, 0, 5, 0),
+            };
+            _toolbarPanel.Paint += OnToolbarPaint;
+
+            // Helper: create a flat nav button (BrowserButton style)
+            static Button MakeNavButton(string text) => new Button
+            {
+                Text      = text,
+                Font      = new Font("Segoe UI", 10f, FontStyle.Regular, GraphicsUnit.Point),
+                ForeColor = Color.Black,
+                BackColor = Color.FromArgb(0xFF, 0xF0, 0xF0, 0xF0),
+                FlatStyle = FlatStyle.Flat,
+                Height    = 30,
+                Width     = 56,
+                Cursor    = Cursors.Hand,
+                UseVisualStyleBackColor = false,
+            };
+
+            _tbHomeButton   = MakeNavButton("⌂ Home");
+            _tbBackButton   = MakeNavButton("← Back");
+            _tbFwdButton    = MakeNavButton("→ Fwd");
+            _tbReloadButton = MakeNavButton("↺ Reload");
+
+            foreach (var btn in new[] { _tbHomeButton, _tbBackButton, _tbFwdButton, _tbReloadButton })
+            {
+                btn.FlatAppearance.BorderSize        = 0;
+                btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(0xE0, 0xE0, 0xE0);
+                btn.FlatAppearance.MouseDownBackColor = Color.FromArgb(0xC8, 0xC8, 0xC8);
+                btn.Click += (_, _) => MessageBox.Show("Not available in exam mode.", "Safe Exam Browser", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                _toolbarPanel.Controls.Add(btn);
+            }
+
+            // Exam-title read-only textbox (URL-bar style)
+            string examTitleForBar = _examData?.ExamTitle ?? "Grade 12 ESSLCE Mock Exam";
+            _tbTitleBox = new TextBox
+            {
+                Text         = examTitleForBar,
+                ReadOnly     = true,
+                Height       = 25,
+                Font         = new Font("Segoe UI", 10f, FontStyle.Regular, GraphicsUnit.Point),
+                BackColor    = Color.White,
+                ForeColor    = Color.Black,
+                BorderStyle  = BorderStyle.FixedSingle,
+                Padding      = new Padding(5, 0, 0, 0),
+                TabStop      = false,
+            };
+            _toolbarPanel.Controls.Add(_tbTitleBox);
+
+            // Layout toolbar controls (positioned manually for precise control)
+            _toolbarPanel.Resize += (s, e) => LayoutToolbar();
 
             // ── Main Content Area ─────────────────────────────────────────────
             _contentPanel = new Panel
@@ -497,17 +562,41 @@ namespace SEBClone.Forms
 
             // ── Add to Form Controls ──────────────────────────────────────────
             Controls.Add(_contentPanel);
+            Controls.Add(_toolbarPanel);
             Controls.Add(_taskbarPanel);
 
             // Perform initial layout calculations
             LayoutTaskbarControls();
             LayoutLeftTopBar();
             LayoutLeftNavPanel();
+            LayoutToolbar();
 
             ResumeLayout(false);
         }
 
         // ── Layout calculations ───────────────────────────────────────────────
+        private void LayoutToolbar()
+        {
+            if (_toolbarPanel == null || _tbHomeButton == null) return;
+
+            int x = 5;
+            int btnY = (_toolbarPanel.Height - 30) / 2;
+
+            foreach (var btn in new[] { _tbHomeButton, _tbBackButton, _tbFwdButton, _tbReloadButton })
+            {
+                btn.Location = new Point(x, btnY);
+                x += btn.Width + 5;
+            }
+
+            // Title textbox fills remaining width
+            int remaining = _toolbarPanel.Width - x - 5;
+            if (remaining > 40)
+            {
+                _tbTitleBox.Width    = remaining;
+                _tbTitleBox.Location = new Point(x, (_toolbarPanel.Height - _tbTitleBox.Height) / 2);
+            }
+        }
+
         private void LayoutTaskbarControls()
         {
             if (_taskbarPanel == null || _logoPicture == null || _nameLabel == null || _quitButton == null || _clockLabel == null)
@@ -712,6 +801,13 @@ namespace SEBClone.Forms
         {
             using var pen = new Pen(Color.LightGray, 1);
             e.Graphics.DrawLine(pen, 0, 0, _taskbarPanel.Width, 0);
+        }
+
+        private void OnToolbarPaint(object? sender, PaintEventArgs e)
+        {
+            // Bottom border: 1px LightGray — mirrors BrowserWindow.xaml BorderThickness="0,0,0,1"
+            using var pen = new Pen(Color.LightGray, 1);
+            e.Graphics.DrawLine(pen, 0, _toolbarPanel.Height - 1, _toolbarPanel.Width, _toolbarPanel.Height - 1);
         }
 
         private void OnRightPanelPaint(object? sender, PaintEventArgs e)

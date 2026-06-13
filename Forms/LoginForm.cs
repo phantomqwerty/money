@@ -21,12 +21,12 @@ namespace SEBClone.Forms
         private static string Asset(string relativePath) =>
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, relativePath);
 
-        // ── Palette ───────────────────────────────────────────────────────────
-        private static readonly Color NavyDark   = Color.FromArgb(30,  39,  60);
+        // ── Palette ─────────────────────────────────────────────────────
+        private static readonly Color NavyDark   = Color.FromArgb(30,  39,  60);  // kept for card text
         private static readonly Color NavyMid    = Color.FromArgb(42,  54,  82);
         private static readonly Color AccentBlue = Color.FromArgb(55,  90, 180);
         private static readonly Color LabelGrey  = Color.FromArgb(90, 100, 120);
-        private static readonly Color ShadowCol  = Color.FromArgb(60,   0,   0,   0);
+        private static readonly Color ShadowCol  = Color.FromArgb(40,   0,   0,   0); // lighter shadow on light bg
 
         // ── Controls ──────────────────────────────────────────────────────────
         private Panel       _shadowPanel  = null!;
@@ -64,7 +64,7 @@ namespace SEBClone.Forms
 
             // ── Form ──────────────────────────────────────────────────────────
             Text          = "Safe Exam Browser";
-            BackColor     = NavyDark;
+            BackColor     = Color.FromArgb(240, 240, 240); // SEB light theme #FFF0F0F0
             DoubleBuffered = true;
 
             string icoPath = Asset(Path.Combine("Assets", "icons", "SafeExamBrowser.ico"));

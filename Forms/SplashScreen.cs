@@ -25,7 +25,7 @@ namespace SEBClone.Forms
             // ── Form properties ───────────────────────────────────────────────
             Text                = string.Empty;
             FormBorderStyle     = FormBorderStyle.None;
-            Size                = new Size(600, 400);
+            Size                = new Size(660, 430);
             StartPosition       = FormStartPosition.CenterScreen;
             ShowInTaskbar       = false;
             DoubleBuffered      = true;
@@ -54,8 +54,8 @@ namespace SEBClone.Forms
                 Font      = new Font("Segoe UI", 12f, FontStyle.Bold, GraphicsUnit.Point),
                 AutoSize  = false,
                 TextAlign = ContentAlignment.MiddleCenter,
-                Size      = new Size(600, 46),
-                Location  = new Point(0, 346),          // 8 px above the bottom edge
+                Size      = new Size(660, 46),
+                Location  = new Point(0, 376),          // 8 px above the bottom edge (430-46-8)
                 BackColor = Color.Transparent,
             };
             Controls.Add(_loadingLabel);
