@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Windows.Forms;
 using SEBClone.Models;
@@ -42,8 +43,9 @@ namespace SEBClone.Forms
         private Panel      _optionsPanel = null!;
         private RadioButton[] _optionRadios = null!;
         private Panel      _leftNavPanel = null!;
-        private Button     _prevButton = null!;
-        private Button     _nextButton = null!;
+        private Button     _prevButton    = null!;
+        private Button     _nextButton    = null!;
+        private Button     _submitButton  = null!;
 
         // Right Panel (Question Navigator)
         private Panel      _rightPanel = null!;
@@ -75,7 +77,6 @@ namespace SEBClone.Forms
             // Apply kiosk lockdown AFTER InitializeComponent so the handle
             // has not been created yet (avoids recreating the native window).
             LockdownManager.ApplyLockdown(this);
-            FormClosed += (_, _) => Application.Exit();
         }
 
         // ── Kiosk: strip min/max buttons from the native window style ─────────
@@ -318,6 +319,23 @@ namespace SEBClone.Forms
             _nextButton.Click += (s, e) => GoToQuestion(_currentQuestionIndex + 1);
             _leftNavPanel.Controls.Add(_nextButton);
 
+            _submitButton = new Button
+            {
+                Text      = "Submit Exam",
+                Font      = new Font("Segoe UI", 11f, FontStyle.Bold, GraphicsUnit.Pixel),
+                ForeColor = Color.White,
+                BackColor = Color.FromArgb(0xD3, 0x2F, 0x2F),
+                FlatStyle = FlatStyle.Flat,
+                Size      = new Size(120, 34),
+                Cursor    = Cursors.Hand,
+                UseVisualStyleBackColor = false,
+            };
+            _submitButton.FlatAppearance.BorderSize = 0;
+            _submitButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(0xB7, 0x1C, 0x1C);
+            _submitButton.FlatAppearance.MouseDownBackColor = Color.FromArgb(0x8B, 0x00, 0x00);
+            _submitButton.Click += OnSubmitClick;
+            _leftNavPanel.Controls.Add(_submitButton);
+
             _leftNavPanel.Resize += (s, e) => LayoutLeftNavPanel();
 
             _questionBodyPanel = new Panel
@@ -524,13 +542,14 @@ namespace SEBClone.Forms
 
         private void LayoutLeftNavPanel()
         {
-            if (_leftNavPanel == null || _prevButton == null || _nextButton == null)
+            if (_leftNavPanel == null || _prevButton == null || _nextButton == null || _submitButton == null)
                 return;
 
             int w = _leftNavPanel.Width;
             int h = _leftNavPanel.Height;
-            _prevButton.Location = new Point(20, (h - 34) / 2);
-            _nextButton.Location = new Point(w - 100 - 20, (h - 34) / 2);
+            _prevButton.Location   = new Point(20, (h - 34) / 2);
+            _nextButton.Location   = new Point(w - 120 - 20 - 120 - 12, (h - 34) / 2);
+            _submitButton.Location = new Point(w - 120 - 20, (h - 34) / 2);
         }
 
         private void LayoutOptionsPanel()
@@ -716,6 +735,47 @@ namespace SEBClone.Forms
             {
                 GoToQuestion(index);
             }
+        }
+
+        private void OnSubmitClick(object? sender, EventArgs e)
+        {
+            // Save the currently displayed question's answer first
+            SaveCurrentQuestionState();
+
+            // Count unanswered questions
+            int unansweredCount = _answers.Count(a => string.IsNullOrEmpty(a));
+
+            if (unansweredCount > 0)
+            {
+                var choice = MessageBox.Show(
+                    $"You have {unansweredCount} unanswered question(s). Are you sure you want to submit?",
+                    "Submit Exam",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning);
+
+                if (choice == DialogResult.No)
+                    return;
+            }
+
+            // Build results list
+            var results = new List<QuestionResult>();
+            for (int i = 0; i < _examData.Questions.Count; i++)
+            {
+                results.Add(new QuestionResult
+                {
+                    QuestionNumber = i + 1,
+                    QuestionText   = _examData.Questions[i].Text,
+                    SelectedAnswer = _answers[i] ?? "Not answered",
+                    CorrectAnswer  = _examData.Questions[i].Answer,
+                    IsCorrect      = _answers[i] == _examData.Questions[i].Answer,
+                });
+            }
+
+            int score = results.Count(r => r.IsCorrect);
+
+            var resultsForm = new ResultsForm(score, _examData.Questions.Count, results, _studentName);
+            resultsForm.Show();
+            this.Close();
         }
 
         // ── Cleanup ───────────────────────────────────────────────────────────

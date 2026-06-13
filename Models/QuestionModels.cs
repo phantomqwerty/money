@@ -29,4 +29,16 @@ namespace SEBClone.Models
         [JsonPropertyName("questions")]
         public List<Question> Questions { get; set; } = new();
     }
+
+    /// <summary>
+    /// Holds the result of a single exam question for the results review panel.
+    /// </summary>
+    public class QuestionResult
+    {
+        public int    QuestionNumber  { get; set; }
+        public string QuestionText    { get; set; } = string.Empty;
+        public string SelectedAnswer  { get; set; } = string.Empty;
+        public string CorrectAnswer   { get; set; } = string.Empty;
+        public bool   IsCorrect       { get; set; }
+    }
 }
