@@ -271,11 +271,9 @@ namespace SEBClone.Forms
 
         private void OnBeginExamClick(object? sender, EventArgs e)
         {
-            MessageBox.Show(
-                "Exam screen — Phase 6",
-                "Safe Exam Browser",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
+            var exam = new ExamForm(_studentName);
+            exam.Show();
+            this.Close();
         }
 
         private void OnBackClick(object? sender, EventArgs e)

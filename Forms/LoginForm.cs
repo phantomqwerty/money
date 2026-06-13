@@ -49,7 +49,6 @@ namespace SEBClone.Forms
             // Apply kiosk lockdown AFTER InitializeComponent so the handle
             // has not been created yet (avoids recreating the native window).
             LockdownManager.ApplyLockdown(this);
-            FormClosed += (_, _) => Application.Exit();
         }
 
         // ── Kiosk: strip min/max buttons from the native window style ─────────
