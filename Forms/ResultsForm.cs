@@ -137,7 +137,12 @@ namespace SEBClone.Forms
             closeButton.FlatAppearance.BorderSize = 0;
             closeButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(200, 40, 40);
             closeButton.FlatAppearance.MouseDownBackColor = Color.FromArgb(160, 20, 20);
-            closeButton.Click += (_, _) => Application.Exit();
+            closeButton.Click += (_, _) =>
+            {
+                using var dialog = new ExitDialog();
+                if (dialog.ShowDialog() == DialogResult.OK)
+                    Application.Exit();
+            };
 
             bottomPanel.Resize += (s, e) =>
             {

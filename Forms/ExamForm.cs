@@ -205,7 +205,7 @@ namespace SEBClone.Forms
             _quitButton.FlatAppearance.MouseDownBackColor = Color.FromArgb(180, 20, 20);
             _quitButton.MouseEnter += (_, _) => _quitButton.BackColor = Color.FromArgb(240, 60, 60);
             _quitButton.MouseLeave += (_, _) => _quitButton.BackColor = Color.FromArgb(220, 40, 40);
-            _quitButton.Click      += (_, _) => Application.Exit();
+            _quitButton.Click      += OnQuitClick;
             _taskbarPanel.Controls.Add(_quitButton);
 
             // ── Clock Timer ───────────────────────────────────────────────────
@@ -696,6 +696,13 @@ namespace SEBClone.Forms
         }
 
         // ── Event Handlers ────────────────────────────────────────────────────
+        private void OnQuitClick(object? sender, EventArgs e)
+        {
+            using var dialog = new ExitDialog();
+            if (dialog.ShowDialog() == DialogResult.OK)
+                Application.Exit();
+        }
+
         private void OnClockTick(object? sender, EventArgs e)
         {
             _clockLabel.Text = DateTime.Now.ToString("HH:mm:ss");
