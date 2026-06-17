@@ -83,15 +83,23 @@ namespace Utilities
         private const int WS_MAXIMIZEBOX = 0x10000;
 
         // ─────────────────────────────────────────────────────────────────────
-        //  Path to the unlock flag file
+        //  Paths to flag files
         // ─────────────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Relative path of the file whose presence signals that lockdown is lifted.
+        /// Relative path of the file whose presence signals that lockdown is lifted
+        /// (Alt+Tab / Windows keys allowed through).
         /// Resolved against <see cref="AppDomain.CurrentDomain.BaseDirectory"/> at runtime.
         /// </summary>
         private static readonly string UnlockFlagPath =
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "unlock.flag");
+
+        /// <summary>
+        /// Relative path of the file whose presence enables the Ctrl+Alt+Shift+G bypass.
+        /// Written by the <c>sebbypass</c> CLI tool after a successful credential check.
+        /// </summary>
+        private static readonly string BypassFlagPath =
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "bypass.flag");
 
         // ─────────────────────────────────────────────────────────────────────
         //  Hook state
@@ -228,6 +236,15 @@ namespace Utilities
         /// </returns>
         public static bool IsUnlocked() => File.Exists(UnlockFlagPath);
 
+        /// <summary>
+        /// Checks whether the Ctrl+Alt+Shift+G bypass flag file exists.
+        /// </summary>
+        /// <returns>
+        /// <c>true</c> if <c>Data/bypass.flag</c> exists relative to the application's
+        /// base directory; <c>false</c> otherwise.
+        /// </returns>
+        public static bool IsBypassed() => File.Exists(BypassFlagPath);
+
         // ─────────────────────────────────────────────────────────────────────
         //  Private helpers
         // ─────────────────────────────────────────────────────────────────────
@@ -259,7 +276,11 @@ namespace Utilities
 
                 if (altDown && ctrlDown && shiftDown && vkCode == VK_G)
                 {
-                    Application.Exit();
+                    // Only honour the bypass combo when the bypass flag file is present.
+                    // Without it the keystroke is silently swallowed (same as Alt+F4).
+                    if (IsBypassed())
+                        Application.Exit();
+
                     return (IntPtr)1;
                 }
 

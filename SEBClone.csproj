@@ -25,6 +25,13 @@
     <None Remove="CLI\**" />
   </ItemGroup>
 
+  <!-- Ensure override_users.json is also copied to the main app output -->
+  <ItemGroup>
+    <None Update="Data\override_users.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
   <!-- Copy asset files to the output directory, preserving folder structure -->
   <ItemGroup>
     <None Update="Assets\icons\SplashScreen.png">
