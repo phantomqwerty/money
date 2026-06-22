@@ -28,3 +28,7 @@ packages/
 
 # Test results
 TestResults/
+
+Data/override_users.json
+Data/bypass.flag
+Data/unlock.flag
