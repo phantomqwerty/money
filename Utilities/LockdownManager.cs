@@ -48,6 +48,11 @@ namespace Utilities
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern IntPtr GetModuleHandle(string lpModuleName);
 
+        [DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        private const int SW_MINIMIZE = 6;
+
         // ─────────────────────────────────────────────────────────────────────
         //  Win32 constants
         // ─────────────────────────────────────────────────────────────────────
@@ -92,14 +97,14 @@ namespace Utilities
         /// Resolved against <see cref="AppDomain.CurrentDomain.BaseDirectory"/> at runtime.
         /// </summary>
         private static readonly string UnlockFlagPath =
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "unlock.flag");
+    		@"C:\Project\money\Data\unlock.flag";
 
         /// <summary>
         /// Relative path of the file whose presence enables the Ctrl+Alt+Shift+G bypass.
         /// Written by the <c>sebbypass</c> CLI tool after a successful credential check.
         /// </summary>
         private static readonly string BypassFlagPath =
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "bypass.flag");
+    		@"C:\Project\money\Data\bypass.flag";
 
         // ─────────────────────────────────────────────────────────────────────
         //  Hook state
@@ -113,6 +118,11 @@ namespace Utilities
         /// while the unmanaged hook is still active.
         /// </summary>
         private static LowLevelKeyboardProc? _hookProc;
+
+        /// <summary>Tracks the active form that was last locked down.</summary>
+        private static Form? _activeForm;
+
+        private static IntPtr _activeFormHandle = IntPtr.Zero;
 
         // ─────────────────────────────────────────────────────────────────────
         //  Public API
@@ -128,6 +138,12 @@ namespace Utilities
         public static void ApplyLockdown(Form form)
         {
             if (form is null) throw new ArgumentNullException(nameof(form));
+
+            _activeForm = form;
+
+            form.HandleCreated += (s, e) => _activeFormHandle = form.Handle;
+            if (form.IsHandleCreated)
+                _activeFormHandle = form.Handle;
 
             // Remove all chrome so the user cannot drag, resize, or close the window.
             form.FormBorderStyle = FormBorderStyle.None;
@@ -276,11 +292,16 @@ namespace Utilities
 
                 if (altDown && ctrlDown && shiftDown && vkCode == VK_G)
                 {
-                    // Only honour the bypass combo when the bypass flag file is present.
-                    // Without it the keystroke is silently swallowed (same as Alt+F4).
-                    if (IsBypassed())
-                        Application.Exit();
-
+                    if (IsBypassed() && _activeFormHandle != IntPtr.Zero)
+                    {
+                        IntPtr hwnd = _activeFormHandle;
+                        ShowWindow(hwnd, SW_MINIMIZE);
+                        _activeForm?.BeginInvoke(new Action(() =>
+                        {
+                            if (_activeForm != null)
+                                _activeForm.TopMost = false;
+                        }));
+                    }
                     return (IntPtr)1;
                 }
 

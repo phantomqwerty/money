@@ -12,33 +12,41 @@ namespace SEBClone.Forms
     /// <summary>
     /// Full-screen kiosk login form.
     /// Applies <see cref="LockdownManager"/> on construction and presents a
-    /// centred white card containing the SEB logo, title, username/exam-code
-    /// inputs, and a "Start Exam" button.
+    /// centred white card containing the exam logo, title, username/exam-code
+    /// inputs, and a "Log in" button.
     /// </summary>
     internal sealed class LoginForm : Form
     {
+        // ── P/Invoke for Cue Banner (Placeholders) ────────────────────────────
+        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+        private static extern int SendMessage(IntPtr hWnd, int msg, int wParam, [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.LPWStr)] string lParam);
+        private const int EM_SETCUEBANNER = 0x1501;
+
         // ── Asset path helper ─────────────────────────────────────────────────
         private static string Asset(string relativePath) =>
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, relativePath);
 
-        // ── Palette ─────────────────────────────────────────────────────
-        private static readonly Color NavyDark   = Color.FromArgb(30,  39,  60);  // kept for card text
-        private static readonly Color NavyMid    = Color.FromArgb(42,  54,  82);
-        private static readonly Color AccentBlue = Color.FromArgb(55,  90, 180);
-        private static readonly Color LabelGrey  = Color.FromArgb(90, 100, 120);
-        private static readonly Color ShadowCol  = Color.FromArgb(40,   0,   0,   0); // lighter shadow on light bg
+        // ── Palette ───────────────────────────────────────────────────────────
+        private static readonly Color PageBgCol     = Color.FromArgb(247, 248, 252); // #F7F8FC light lavender-grey
+        private static readonly Color TitleBlue     = Color.FromArgb(30, 64, 175);   // #1E40AF bold title blue
+        private static readonly Color ButtonBlue    = Color.FromArgb(50, 99, 195);   // #3263C3 solid blue login button
+        private static readonly Color ButtonHover   = Color.FromArgb(38, 77, 155);   // darker blue on hover
+        private static readonly Color ButtonPressed = Color.FromArgb(26, 55, 112);   // deep blue on press
+        private static readonly Color BorderGrey    = Color.FromArgb(209, 213, 219); // #D1D5DB light grey input border
 
         // ── Controls ──────────────────────────────────────────────────────────
-        private Panel       _shadowPanel  = null!;
         private Panel       _cardPanel    = null!;
         private PictureBox  _logoPicture  = null!;
         private Label       _titleLabel   = null!;
-        private Label       _divider      = null!;
         private Label       _userLabel    = null!;
         private TextBox     _userBox      = null!;
         private Label       _codeLabel    = null!;
         private TextBox     _codeBox      = null!;
         private Button      _startButton  = null!;
+
+        // Containers for rounded inputs
+        private Panel       _userBoxContainer = null!;
+        private Panel       _codeBoxContainer = null!;
 
         // ── Constructor ───────────────────────────────────────────────────────
 
@@ -63,103 +71,86 @@ namespace SEBClone.Forms
             SuspendLayout();
 
             // ── Form ──────────────────────────────────────────────────────────
-            Text          = "Safe Exam Browser";
-            BackColor     = Color.FromArgb(240, 240, 240); // SEB light theme #FFF0F0F0
+            Text           = "Safe Exam Browser";
+            BackColor      = PageBgCol;
             DoubleBuffered = true;
+            Paint         += OnFormPaint;
 
             string icoPath = Asset(Path.Combine("Assets", "icons", "SafeExamBrowser.ico"));
             if (File.Exists(icoPath))
                 Icon = new Icon(icoPath);
 
-            // ── Shadow panel (offset behind the card for depth) ───────────────
-            _shadowPanel = new Panel
-            {
-                BackColor = ShadowCol,
-                Size      = new Size(406, 486),
-            };
-            Controls.Add(_shadowPanel);
-
-            // ── Card panel ────────────────────────────────────────────────────
+            // ── Card panel (Transparent background, paints white rounded rect) ─
             _cardPanel = new RoundedPanel(16)
             {
-                BackColor = Color.White,
-                Size      = new Size(400, 480),
+                Size = new Size(550, 480),
             };
-            _cardPanel.Paint += OnCardPaint;
             Controls.Add(_cardPanel);
 
-            // ── Logo (64×64 from .ico) ────────────────────────────────────────
+            // ── Logo (168x132, cropped static PictureBox) ─────────────────────
             _logoPicture = new PictureBox
             {
-                Size     = new Size(64, 64),
-                SizeMode = PictureBoxSizeMode.Zoom,
+                SizeMode  = PictureBoxSizeMode.Zoom,
                 BackColor = Color.Transparent,
             };
-            if (File.Exists(icoPath))
-                _logoPicture.Image = new Icon(icoPath, 64, 64).ToBitmap();
+            // Pointed to Assets/images/pagelogo.png as requested
+            string logoPath = Asset(Path.Combine("Assets", "images", "pagelogo.png"));
+            if (File.Exists(logoPath))
+                _logoPicture.Image = Image.FromFile(logoPath);
             _cardPanel.Controls.Add(_logoPicture);
 
             // ── Title ─────────────────────────────────────────────────────────
             _titleLabel = new Label
             {
-                Text      = "Safe Exam Browser — Login",
-                Font      = new Font("Segoe UI", 15f, FontStyle.Bold, GraphicsUnit.Point),
-                ForeColor = NavyDark,
+                Text      = "Grade 12 - National Exam",
+                Font      = new Font("Segoe UI", 26f, FontStyle.Bold, GraphicsUnit.Point),
+                ForeColor = TitleBlue,
                 AutoSize  = false,
                 TextAlign = ContentAlignment.MiddleCenter,
                 BackColor = Color.Transparent,
             };
             _cardPanel.Controls.Add(_titleLabel);
 
-            // ── Thin divider ──────────────────────────────────────────────────
-            _divider = new Label
+            // ── Username Text Box & Container ─────────────────────────────────
+            // Maintain invisible labels to prevent breaking any future checks
+            _userLabel         = new Label { Visible = false };
+            _userBox           = new TextBox { PasswordChar = '\0' };
+            _userBox.Font      = new Font("Segoe UI", 12f, GraphicsUnit.Point);
+            _userBox.HandleCreated += (s, e) => SendMessage(_userBox.Handle, EM_SETCUEBANNER, 1, "Username");
+            
+            _userBoxContainer  = new RoundedTextBoxContainer(_userBox, 8);
+            _cardPanel.Controls.Add(_userBoxContainer);
+
+            // ── Password (Exam Code) Text Box & Container ─────────────────────
+            _codeLabel         = new Label { Visible = false };
+            _codeBox           = new TextBox { PasswordChar = '●' };
+            _codeBox.Font      = new Font("Segoe UI", 12f, GraphicsUnit.Point);
+            _codeBox.HandleCreated += (s, e) => SendMessage(_codeBox.Handle, EM_SETCUEBANNER, 1, "Password");
+            
+            _codeBoxContainer  = new RoundedTextBoxContainer(_codeBox, 8);
+            _cardPanel.Controls.Add(_codeBoxContainer);
+
+            // ── Solid Blue "Log in" button (Custom Rounded Button) ────────────
+            _startButton = new RoundedButton(8)
             {
-                AutoSize  = false,
-                BackColor = Color.FromArgb(220, 225, 235),
-                Height    = 1,
+                Text         = "Log in",
+                Font         = new Font("Segoe UI", 12f, FontStyle.Bold, GraphicsUnit.Point),
+                ForeColor    = Color.White,
+                NormalColor  = ButtonBlue,
+                HoverColor   = ButtonHover,
+                PressedColor = ButtonPressed,
+                Cursor       = Cursors.Hand,
             };
-            _cardPanel.Controls.Add(_divider);
-
-            // ── Username ──────────────────────────────────────────────────────
-            _userLabel = MakeFieldLabel("Username");
-            _cardPanel.Controls.Add(_userLabel);
-
-            _userBox = MakeTextBox(false);
-            _cardPanel.Controls.Add(_userBox);
-
-            // ── Exam Code ─────────────────────────────────────────────────────
-            _codeLabel = MakeFieldLabel("Exam Code");
-            _cardPanel.Controls.Add(_codeLabel);
-
-            _codeBox = MakeTextBox(true);
-            _cardPanel.Controls.Add(_codeBox);
-
-            // ── Start Exam button ─────────────────────────────────────────────
-            _startButton = new Button
-            {
-                Text      = "Start Exam",
-                Font      = new Font("Segoe UI", 12f, FontStyle.Bold, GraphicsUnit.Point),
-                ForeColor = Color.White,
-                BackColor = AccentBlue,
-                FlatStyle = FlatStyle.Flat,
-                Cursor    = Cursors.Hand,
-                UseVisualStyleBackColor = false,
-            };
-            _startButton.FlatAppearance.BorderSize        = 0;
-            _startButton.FlatAppearance.MouseOverBackColor  = Color.FromArgb(70, 110, 200);
-            _startButton.FlatAppearance.MouseDownBackColor  = Color.FromArgb(40,  70, 150);
-            _startButton.Click      += OnStartExamClick;
-            _startButton.MouseEnter += (_, _) => _startButton.BackColor = Color.FromArgb(70, 110, 200);
-            _startButton.MouseLeave += (_, _) => _startButton.BackColor = AccentBlue;
+            _startButton.Click += OnStartExamClick;
             _cardPanel.Controls.Add(_startButton);
 
-            // ── Layout — all relative to card panel ───────────────────────────
+            // ── Layout — relative to card panel ───────────────────────────────
             LayoutCard();
 
             _cardPanel.BringToFront();
             ResumeLayout(false);
 
-            // Centre the card on the screen after the form bounds are applied.
+            // Centre the card on the screen after the form bounds are applied
             Load += OnFormLoad;
         }
 
@@ -167,46 +158,34 @@ namespace SEBClone.Forms
 
         private void LayoutCard()
         {
-            const int cw = 400;   // card width
-            const int mx = 24;    // horizontal margin
-            int aw = cw - mx * 2; // available width for controls
-            int y  = 30;
+            const int cw = 550;   // card width
+            const int mx = 50;    // horizontal padding
+            int aw = cw - mx * 2; // content width (450px)
+            int y  = 40;          // top padding
 
-            // Logo — centred
-            _logoPicture.Location = new Point((cw - 64) / 2, y);
-            y += 76;
+            // Logo
+            _logoPicture.Size     = new Size(168, 132);
+            _logoPicture.Location = new Point((cw - 168) / 2, y);
+            y += 132 + 15;
 
             // Title
             _titleLabel.Location = new Point(mx, y);
-            _titleLabel.Size     = new Size(aw, 38);
-            y += 44;
+            _titleLabel.Size     = new Size(aw, 40);
+            y += 40 + 15;
 
-            // Divider
-            _divider.Location = new Point(mx, y);
-            _divider.Size     = new Size(aw, 1);
-            y += 18;
+            // Username input
+            _userBoxContainer.Location = new Point(mx, y);
+            _userBoxContainer.Size     = new Size(aw, 50);
+            y += 50 + 15;
 
-            // Username
-            _userLabel.Location = new Point(mx, y);
-            _userLabel.Size     = new Size(aw, 20);
-            y += 24;
-
-            _userBox.Location = new Point(mx, y);
-            _userBox.Size     = new Size(aw, 32);
-            y += 50;
-
-            // Exam Code
-            _codeLabel.Location = new Point(mx, y);
-            _codeLabel.Size     = new Size(aw, 20);
-            y += 24;
-
-            _codeBox.Location = new Point(mx, y);
-            _codeBox.Size     = new Size(aw, 32);
-            y += 56;
+            // Password input
+            _codeBoxContainer.Location = new Point(mx, y);
+            _codeBoxContainer.Size     = new Size(aw, 50);
+            y += 50 + 20;
 
             // Button
             _startButton.Location = new Point(mx, y);
-            _startButton.Size     = new Size(aw, 46);
+            _startButton.Size     = new Size(aw, 48);
         }
 
         // ── Form Load — centre the card now that Bounds are set ───────────────
@@ -216,17 +195,57 @@ namespace SEBClone.Forms
             int cx = (ClientSize.Width  - _cardPanel.Width)  / 2;
             int cy = (ClientSize.Height - _cardPanel.Height) / 2;
 
-            _cardPanel.Location   = new Point(cx, cy);
-            _shadowPanel.Location = new Point(cx + 4, cy + 4); // 4 px drop-shadow
+            _cardPanel.Location = new Point(cx, cy);
+            Invalidate(); // trigger Paint to draw the soft shadow
         }
 
-        // ── Card panel paint — draw subtle top-accent bar ─────────────────────
+        // ── Form Paint — Draw smooth drop shadow behind the card ──────────────
 
-        private void OnCardPaint(object? sender, PaintEventArgs e)
+        private void OnFormPaint(object? sender, PaintEventArgs e)
         {
-            // 4-pixel accent stripe along the top of the card in AccentBlue.
-            using var brush = new SolidBrush(AccentBlue);
-            e.Graphics.FillRectangle(brush, 0, 0, _cardPanel.Width, 4);
+            if (_cardPanel != null && _cardPanel.Width > 0 && _cardPanel.Height > 0)
+            {
+                DrawSoftShadow(e.Graphics, _cardPanel.Bounds, 16, 12);
+            }
+        }
+
+        private void DrawSoftShadow(Graphics g, Rectangle rect, int radius, int shadowSize)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            for (int i = 1; i <= shadowSize; i++)
+            {
+                int alpha = (int)(15 * (1.0 - (double)i / shadowSize));
+                if (alpha <= 0) continue;
+                
+                using (var pen = new Pen(Color.FromArgb(alpha, 0, 0, 0), i * 1.5f))
+                {
+                    pen.LineJoin = LineJoin.Round;
+                    using (var path = GetRoundRectPath(
+                        rect.X - i + 2, 
+                        rect.Y - i + 4, // slight vertical offset for drop shadow
+                        rect.Width + (i * 2) - 4, 
+                        rect.Height + (i * 2) - 8, 
+                        radius + i))
+                    {
+                        g.DrawPath(pen, path);
+                    }
+                }
+            }
+        }
+
+        private static GraphicsPath GetRoundRectPath(float x, float y, float width, float height, float radius)
+        {
+            GraphicsPath path = new GraphicsPath();
+            float r2 = radius * 2;
+            if (r2 > width) r2 = width;
+            if (r2 > height) r2 = height;
+            
+            path.AddArc(x, y, r2, r2, 180, 90);
+            path.AddArc(x + width - r2, y, r2, r2, 270, 90);
+            path.AddArc(x + width - r2, y + height - r2, r2, r2, 0, 90);
+            path.AddArc(x, y + height - r2, r2, r2, 90, 90);
+            path.CloseFigure();
+            return path;
         }
 
         // ── Button click — validate credentials and open ProfileConfirm ────
@@ -287,24 +306,6 @@ namespace SEBClone.Forms
             this.Close();
         }
 
-        // ── Factory helpers ───────────────────────────────────────────────────
-
-        private static Label MakeFieldLabel(string text) => new Label
-        {
-            Text      = text,
-            Font      = new Font("Segoe UI", 9.5f, FontStyle.Regular, GraphicsUnit.Point),
-            ForeColor = LabelGrey,
-            AutoSize  = false,
-            BackColor = Color.Transparent,
-        };
-
-        private static TextBox MakeTextBox(bool masked) => new TextBox
-        {
-            Font         = new Font("Segoe UI", 11f, GraphicsUnit.Point),
-            BorderStyle  = BorderStyle.FixedSingle,
-            PasswordChar = masked ? '●' : '\0',
-        };
-
         // ── Cleanup ───────────────────────────────────────────────────────────
 
         protected override void Dispose(bool disposing)
@@ -321,7 +322,7 @@ namespace SEBClone.Forms
     // ── Rounded-corner panel helper ───────────────────────────────────────────
 
     /// <summary>
-    /// A <see cref="Panel"/> whose visible region is clipped to a rounded rectangle.
+    /// A <see cref="Panel"/> whose visible region paints as a white rounded rectangle with anti-aliased edges.
     /// </summary>
     internal sealed class RoundedPanel : Panel
     {
@@ -329,28 +330,203 @@ namespace SEBClone.Forms
 
         public RoundedPanel(int cornerRadius)
         {
-            _radius      = cornerRadius;
+            _radius        = cornerRadius;
             DoubleBuffered = true;
+            BackColor      = Color.Transparent;
         }
 
-        protected override void OnResize(EventArgs e)
+        protected override void OnPaint(PaintEventArgs e)
         {
-            base.OnResize(e);
-            // Guard: only set the region once the panel has a real size.
-            // If either dimension is zero (e.g. during early construction before
-            // Size = new Size(...) is applied), GDI returns a null/empty region
-            // handle and the card would become completely invisible.
-            if (Width > 0 && Height > 0)
+            base.OnPaint(e);
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+            using (var path = new GraphicsPath())
             {
-                Region = Region.FromHrgn(CreateRoundRectRgn(
-                    0, 0, Width, Height, _radius, _radius));
+                float r2 = _radius * 2;
+                path.AddArc(0, 0, r2, r2, 180, 90);
+                path.AddArc(Width - 1 - r2, 0, r2, r2, 270, 90);
+                path.AddArc(Width - 1 - r2, Height - 1 - r2, r2, r2, 0, 90);
+                path.AddArc(0, Height - 1 - r2, r2, r2, 90, 90);
+                path.CloseFigure();
+
+                using (var brush = new SolidBrush(Color.White))
+                {
+                    e.Graphics.FillPath(brush, path);
+                }
+            }
+        }
+    }
+
+    // ── Rounded Text Box Container ────────────────────────────────────────────
+
+    /// <summary>
+    /// A container for a borderless <see cref="TextBox"/> that draws a rounded background and border.
+    /// </summary>
+    internal sealed class RoundedTextBoxContainer : Panel
+    {
+        private readonly TextBox _textBox;
+        private readonly int _radius;
+        private readonly Color _borderColor = Color.FromArgb(209, 213, 219);
+        private bool _isFocused = false;
+
+        public RoundedTextBoxContainer(TextBox textBox, int radius)
+        {
+            _textBox       = textBox;
+            _radius        = radius;
+            DoubleBuffered = true;
+            BackColor      = Color.Transparent;
+
+            _textBox.BorderStyle = BorderStyle.None;
+            _textBox.BackColor   = Color.White;
+            _textBox.GotFocus   += (s, e) => { _isFocused = true; Invalidate(); };
+            _textBox.LostFocus  += (s, e) => { _isFocused = false; Invalidate(); };
+
+            // Focus textbox if user clicks the surrounding container panel
+            Click += (s, e) => _textBox.Focus();
+
+            Controls.Add(_textBox);
+        }
+
+        protected override void OnLayout(LayoutEventArgs levent)
+        {
+            base.OnLayout(levent);
+            if (_textBox != null)
+            {
+                // Align TextBox vertically within container height
+                _textBox.Location = new Point(14, (Height - _textBox.Height) / 2);
+                _textBox.Width    = Width - 28;
             }
         }
 
-        // P/Invoke: creates a rounded-rectangle region handle.
-        [System.Runtime.InteropServices.DllImport("Gdi32.dll")]
-        private static extern IntPtr CreateRoundRectRgn(
-            int nLeftRect, int nTopRect, int nRightRect, int nBottomRect,
-            int nWidthEllipse, int nHeightEllipse);
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+            using (var path = new GraphicsPath())
+            {
+                float r2 = _radius * 2;
+                path.AddArc(0, 0, r2, r2, 180, 90);
+                path.AddArc(Width - 1 - r2, 0, r2, r2, 270, 90);
+                path.AddArc(Width - 1 - r2, Height - 1 - r2, r2, r2, 0, 90);
+                path.AddArc(0, Height - 1 - r2, r2, r2, 90, 90);
+                path.CloseFigure();
+
+                using (var brush = new SolidBrush(Color.White))
+                {
+                    e.Graphics.FillPath(brush, path);
+                }
+
+                Color currentBorderColor = _isFocused ? Color.FromArgb(59, 130, 246) : _borderColor;
+                using (var pen = new Pen(currentBorderColor, 1.5f))
+                {
+                    e.Graphics.DrawPath(pen, path);
+                }
+            }
+        }
+    }
+
+    // ── Rounded Button ────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// A custom <see cref="Button"/> drawn with rounded corners, custom hover states, and anti-aliasing.
+    /// </summary>
+    internal sealed class RoundedButton : Button
+    {
+        private readonly int _radius;
+        private Color _normalColor;
+        private Color _hoverColor;
+        private Color _pressedColor;
+        private bool _isHovered = false;
+        private bool _isPressed = false;
+
+        public RoundedButton(int radius)
+        {
+            _radius                   = radius;
+            DoubleBuffered            = true;
+            FlatStyle                 = FlatStyle.Flat;
+            FlatAppearance.BorderSize = 0;
+        }
+
+        public Color NormalColor
+        {
+            get => _normalColor;
+            set { _normalColor = value; BackColor = value; }
+        }
+
+        public Color HoverColor
+        {
+            get => _hoverColor;
+            set => _hoverColor = value;
+        }
+
+        public Color PressedColor
+        {
+            get => _pressedColor;
+            set => _pressedColor = value;
+        }
+
+        protected override void OnMouseEnter(EventArgs e)
+        {
+            base.OnMouseEnter(e);
+            _isHovered = true;
+            Invalidate();
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            _isHovered = false;
+            _isPressed = false;
+            Invalidate();
+        }
+
+        protected override void OnMouseDown(MouseEventArgs mevent)
+        {
+            base.OnMouseDown(mevent);
+            _isPressed = true;
+            Invalidate();
+        }
+
+        protected override void OnMouseUp(MouseEventArgs mevent)
+        {
+            base.OnMouseUp(mevent);
+            _isPressed = false;
+            Invalidate();
+        }
+
+        protected override void OnPaint(PaintEventArgs pevent)
+        {
+            var g = pevent.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+
+            Color currentBg = _normalColor;
+            if (_isPressed) currentBg = _pressedColor;
+            else if (_isHovered) currentBg = _hoverColor;
+
+            using (var path = new GraphicsPath())
+            {
+                float r2 = _radius * 2;
+                path.AddArc(0, 0, r2, r2, 180, 90);
+                path.AddArc(Width - 1 - r2, 0, r2, r2, 270, 90);
+                path.AddArc(Width - 1 - r2, Height - 1 - r2, r2, r2, 0, 90);
+                path.AddArc(0, Height - 1 - r2, r2, r2, 90, 90);
+                path.CloseFigure();
+
+                using (var brush = new SolidBrush(currentBg))
+                {
+                    g.FillPath(brush, path);
+                }
+            }
+
+            TextRenderer.DrawText(
+                g,
+                Text,
+                Font,
+                ClientRectangle,
+                ForeColor,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis
+            );
+        }
     }
 }
