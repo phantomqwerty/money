@@ -144,6 +144,7 @@ namespace SEBClone.Forms
             Text           = "Safe Exam Browser";
             BackColor      = BgColor;
             DoubleBuffered = true;
+            ShowInTaskbar = true;
 
             string icoPath = Asset(Path.Combine("Assets", "icons", "SafeExamBrowser.ico"));
             if (File.Exists(icoPath))

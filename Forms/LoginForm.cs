@@ -74,11 +74,9 @@ namespace SEBClone.Forms
             Text           = "Safe Exam Browser";
             BackColor      = PageBgCol;
             DoubleBuffered = true;
+            ShowInTaskbar = true;
+            Icon = new Icon(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "icons", "Application.ico"));
             Paint         += OnFormPaint;
-
-            string icoPath = Asset(Path.Combine("Assets", "icons", "SafeExamBrowser.ico"));
-            if (File.Exists(icoPath))
-                Icon = new Icon(icoPath);
 
             // ── Card panel (Transparent background, paints white rounded rect) ─
             _cardPanel = new RoundedPanel(16)
@@ -299,9 +297,8 @@ namespace SEBClone.Forms
                 return;
             }
 
-            // Credentials validated — open the Profile Confirmation screen.
-            // Use username as the display name for now (real names added in a later phase).
-            var confirm = new ProfileConfirm(username, username);
+            // Credentials validated — open the Course Selection screen.
+            var confirm = new CourseSelectForm(username);
             confirm.Show();
             this.Close();
         }

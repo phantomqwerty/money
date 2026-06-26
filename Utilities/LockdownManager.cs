@@ -92,19 +92,25 @@ namespace Utilities
         // ─────────────────────────────────────────────────────────────────────
 
         /// <summary>
+        /// Absolute path to the shared Data directory, resolved next to the running exe.
+        /// </summary>
+        private static readonly string DataDir =
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
+
+        /// <summary>
         /// Relative path of the file whose presence signals that lockdown is lifted
         /// (Alt+Tab / Windows keys allowed through).
         /// Resolved against <see cref="AppDomain.CurrentDomain.BaseDirectory"/> at runtime.
         /// </summary>
         private static readonly string UnlockFlagPath =
-    		@"C:\Project\money\Data\unlock.flag";
+            Path.Combine(DataDir, "unlock.flag");
 
         /// <summary>
         /// Relative path of the file whose presence enables the Ctrl+Alt+Shift+G bypass.
         /// Written by the <c>sebbypass</c> CLI tool after a successful credential check.
         /// </summary>
         private static readonly string BypassFlagPath =
-    		@"C:\Project\money\Data\bypass.flag";
+            Path.Combine(DataDir, "bypass.flag");
 
         // ─────────────────────────────────────────────────────────────────────
         //  Hook state
@@ -304,6 +310,10 @@ namespace Utilities
                     }
                     return (IntPtr)1;
                 }
+
+                // PrintScreen (vkCode 44) block — suppress if bypass.flag does not exist
+                if (vkCode == 44 && !IsBypassed())
+                    return (IntPtr)1;
 
                 bool unlocked  = IsUnlocked();
 

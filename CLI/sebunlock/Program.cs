@@ -41,14 +41,14 @@ namespace SebUnlock
     internal static class Program
     {
         // Paths resolved relative to the directory that contains this exe.
-        private static readonly string BaseDir =
-            AppDomain.CurrentDomain.BaseDirectory;
+        private static readonly string DataDir =
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
 
         private static readonly string UsersJsonPath =
-            Path.Combine(BaseDir, "Data", "users.json");
+            Path.Combine(DataDir, "users.json");
 
         private static readonly string UnlockFlagPath =
-            Path.Combine(BaseDir, "Data", "unlock.flag");
+            Path.Combine(DataDir, "unlock.flag");
 
         private static void Main()
         {
@@ -155,8 +155,7 @@ namespace SebUnlock
         private static void WriteUnlockFlag(string username)
         {
             // Ensure the Data directory exists next to the exe.
-            string dataDir = Path.GetDirectoryName(UnlockFlagPath)!;
-            Directory.CreateDirectory(dataDir);
+            Directory.CreateDirectory(DataDir);
 
             File.WriteAllText(
                 UnlockFlagPath,

@@ -271,7 +271,7 @@ namespace SEBClone.Forms
 
         private void OnBeginExamClick(object? sender, EventArgs e)
         {
-            var exam = new ExamForm(_studentName);
+            var exam = new Forms.CourseSelectForm(_studentName);
             exam.Show();
             this.Close();
         }

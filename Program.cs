@@ -29,6 +29,30 @@ namespace SEBClone
                 // regardless of how it terminates.
                 Application.ApplicationExit += (_, _) => LockdownManager.UninstallKeyboardHook();
 
+                // Create desktop shortcut if it doesn't exist
+                try
+                {
+                    string shortcutPath = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                        "SEBClone.lnk");
+                    if (!File.Exists(shortcutPath))
+                    {
+                        string exePath = Application.ExecutablePath;
+                        string iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
+                            "Assets", "icons", "Application.ico");
+                        // Use WScript.Shell COM object to create shortcut
+                        Type shellType = Type.GetTypeFromProgID("WScript.Shell")!;
+                        dynamic shell = Activator.CreateInstance(shellType)!;
+                        dynamic shortcut = shell.CreateShortcut(shortcutPath);
+                        shortcut.TargetPath = exePath;
+                        shortcut.IconLocation = iconPath;
+                        shortcut.WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                        shortcut.Description = "SEBClone Exam Browser";
+                        shortcut.Save();
+                    }
+                }
+                catch { /* silently skip if shortcut creation fails */ }
+
                 // Start with the splash screen; it will open LoginForm after 2.5 s.
                 var splash = new Forms.SplashScreen();
                 splash.Show();

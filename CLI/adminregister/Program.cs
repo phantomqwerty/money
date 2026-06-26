@@ -33,11 +33,11 @@ namespace AdminRegister
 
     internal static class Program
     {
-        private static readonly string BaseDir =
-            AppDomain.CurrentDomain.BaseDirectory;
+        private static readonly string DataDir =
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
 
         private static readonly string OverrideUsersPath =
-            Path.Combine(BaseDir, "Data", "override_users.json");
+            Path.Combine(DataDir, "override_users.json");
 
         private static void Main()
         {
@@ -132,8 +132,7 @@ namespace AdminRegister
         /// </summary>
         private static void SaveUsers(List<OverrideUser> users)
         {
-            string dataDir = Path.GetDirectoryName(OverrideUsersPath)!;
-            Directory.CreateDirectory(dataDir);
+            Directory.CreateDirectory(DataDir);
 
             string json = JsonSerializer.Serialize(users, new JsonSerializerOptions
             {

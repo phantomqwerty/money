@@ -36,14 +36,14 @@ namespace SebBypass
 
     internal static class Program
     {
-        private static readonly string BaseDir =
-            AppDomain.CurrentDomain.BaseDirectory;
+        private static readonly string DataDir =
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
 
         private static readonly string OverrideUsersPath =
-            Path.Combine(BaseDir, "Data", "override_users.json");
+            Path.Combine(DataDir, "override_users.json");
 
         private static readonly string BypassFlagPath =
-            Path.Combine(BaseDir, "Data", "bypass.flag");
+            Path.Combine(DataDir, "bypass.flag");
 
         private static void Main()
         {
@@ -155,8 +155,7 @@ namespace SebBypass
         /// </summary>
         private static void WriteBypassFlag(string username)
         {
-            string dataDir = Path.GetDirectoryName(BypassFlagPath)!;
-            Directory.CreateDirectory(dataDir);
+            Directory.CreateDirectory(DataDir);
 
             File.WriteAllText(
                 BypassFlagPath,
