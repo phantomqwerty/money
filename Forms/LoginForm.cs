@@ -75,7 +75,8 @@ namespace SEBClone.Forms
             BackColor      = PageBgCol;
             DoubleBuffered = true;
             ShowInTaskbar = true;
-            Icon = new Icon(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "icons", "Application.ico"));
+            string icoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "icons", "Application.ico");
+            if (File.Exists(icoPath)) Icon = new Icon(icoPath);
             Paint         += OnFormPaint;
 
             // ── Card panel (Transparent background, paints white rounded rect) ─
@@ -245,8 +246,6 @@ namespace SEBClone.Forms
             path.CloseFigure();
             return path;
         }
-
-        // ── Button click — validate credentials and open ProfileConfirm ────
 
         private void OnStartExamClick(object? sender, EventArgs e)
         {

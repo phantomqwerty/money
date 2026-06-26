@@ -44,7 +44,8 @@ namespace SEBClone.Forms
             BackColor = Color.FromArgb(0xF0, 0xF0, 0xF0);
             FormBorderStyle = FormBorderStyle.None;
             ShowInTaskbar = true;
-            Icon = new Icon(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "icons", "Application.ico"));
+            string icoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "icons", "Application.ico");
+            if (File.Exists(icoPath)) Icon = new Icon(icoPath);
             WindowState = FormWindowState.Maximized;
             Font = new Font("Segoe UI", 9f);
             Padding = Padding.Empty;

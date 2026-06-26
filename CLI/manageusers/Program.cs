@@ -1,17 +1,7 @@
-// ============================================================
-//  ManageUsers — add, remove, and list students in
-//  Data/users.json next to this exe.
-//
-//  users.json format (simple key/value map):
-//    {
-//      "StudentName": "password123",
-//      ...
-//    }
-// ============================================================
-
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 
 string dataDir   = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
@@ -35,24 +25,24 @@ while (true)
     switch (choice)
     {
         case "1":
-            var users = LoadUsers();
-            if (users.Count == 0) { Console.WriteLine("No students registered."); break; }
+            var store = LoadStore();
+            if (store.students.Count == 0) { Console.WriteLine("No students registered."); break; }
             Console.WriteLine("\nRegistered students:");
-            foreach (var u in users) Console.WriteLine($"  - {u.Key}");
+            foreach (var s in store.students) Console.WriteLine($"  - {s.username}");
             break;
 
         case "2":
             Console.Write("Username: ");
             var newUser = Console.ReadLine()?.Trim();
-            Console.Write("Password: ");
+            Console.Write("Secret Key: ");
             var newPass = Console.ReadLine()?.Trim();
             if (string.IsNullOrEmpty(newUser) || string.IsNullOrEmpty(newPass))
-            { Console.WriteLine("Username and password cannot be empty."); break; }
-            var addUsers = LoadUsers();
-            if (addUsers.ContainsKey(newUser))
+            { Console.WriteLine("Username and secret key cannot be empty."); break; }
+            var addStore = LoadStore();
+            if (addStore.students.Exists(s => s.username == newUser))
             { Console.WriteLine($"User '{newUser}' already exists."); break; }
-            addUsers[newUser] = newPass;
-            SaveUsers(addUsers);
+            addStore.students.Add(new Student { username = newUser, secretKey = newPass });
+            SaveStore(addStore);
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine($"   \u2713 Student '{newUser}' added.");
             Console.ResetColor();
@@ -61,11 +51,12 @@ while (true)
         case "3":
             Console.Write("Username to remove: ");
             var delUser = Console.ReadLine()?.Trim();
-            var delUsers = LoadUsers();
-            if (string.IsNullOrEmpty(delUser) || !delUsers.ContainsKey(delUser))
+            var delStore = LoadStore();
+            var toRemove = delStore.students.FindIndex(s => s.username == delUser);
+            if (string.IsNullOrEmpty(delUser) || toRemove < 0)
             { Console.WriteLine($"User '{delUser}' not found."); break; }
-            delUsers.Remove(delUser);
-            SaveUsers(delUsers);
+            delStore.students.RemoveAt(toRemove);
+            SaveStore(delStore);
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"   Student '{delUser}' removed.");
             Console.ResetColor();
@@ -80,16 +71,18 @@ while (true)
     }
 }
 
-Dictionary<string, string> LoadUsers()
+UserStore LoadStore()
 {
-    if (!File.Exists(usersFile)) return new Dictionary<string, string>();
+    if (!File.Exists(usersFile)) return new UserStore();
     var json = File.ReadAllText(usersFile);
-    return JsonSerializer.Deserialize<Dictionary<string, string>>(json)
-           ?? new Dictionary<string, string>();
+    return JsonSerializer.Deserialize<UserStore>(json) ?? new UserStore();
 }
 
-void SaveUsers(Dictionary<string, string> users)
+void SaveStore(UserStore store)
 {
-    var json = JsonSerializer.Serialize(users, new JsonSerializerOptions { WriteIndented = true });
+    var json = JsonSerializer.Serialize(store, new JsonSerializerOptions { WriteIndented = true });
     File.WriteAllText(usersFile, json);
 }
+
+class Student  { public string username { get; set; } = ""; public string secretKey { get; set; } = ""; }
+class UserStore { public List<Student> students { get; set; } = new(); }
